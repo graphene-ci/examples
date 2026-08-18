@@ -3,10 +3,9 @@ module github.com/graphene-ci/examples
 go 1.26.5
 
 require (
-	github.com/crossplane/crossplane-runtime/v2 v2.0.0-20250730220209-c306b1c8b181
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/graphene-ci/library/docker v0.0.0-20260818121339-17efd66e8205
-	github.com/graphene-ci/library/k8s v0.0.0-20260818121339-17efd66e8205
+	github.com/graphene-ci/library/k8s v0.0.0-20260818122344-efd3809ec835
 	github.com/graphene-ci/pipeline v0.0.0-20260818120651-5a95ca33a7d0
 	github.com/yandex-cloud/crossplane-provider-yc v0.14.0
 	k8s.io/apimachinery v0.36.3
@@ -16,6 +15,8 @@ require (
 	dario.cat/mergo v1.0.2 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect
+	github.com/alecthomas/kingpin/v2 v2.4.0 // indirect
+	github.com/alecthomas/units v0.0.0-20240927000941-0f3dac36c52b // indirect
 	github.com/antchfx/htmlquery v1.2.4 // indirect
 	github.com/antchfx/xpath v1.2.0 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
@@ -25,7 +26,10 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
+	github.com/crossplane/crossplane-runtime/v2 v2.0.0-20250730220209-c306b1c8b181 // indirect
+	github.com/crossplane/crossplane-tools v0.0.0-20250731192036-00d407d8b7ec // indirect
 	github.com/crossplane/upjet/v2 v2.1.0 // indirect
+	github.com/dave/jennifer v1.7.1 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/go-connections v0.8.1 // indirect
@@ -103,6 +107,7 @@ require (
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
+	github.com/xhit/go-str2duration/v2 v2.1.0 // indirect
 	github.com/yuin/goldmark v1.7.1 // indirect
 	github.com/zclconf/go-cty v1.16.2 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
