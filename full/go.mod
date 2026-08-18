@@ -5,9 +5,9 @@ go 1.26.5
 require (
 	github.com/crossplane/crossplane-runtime/v2 v2.2.0
 	github.com/docker/docker v28.5.2+incompatible
-	github.com/graphene-ci/library/docker v0.0.0-20260818133728-2aa87fdabd75
-	github.com/graphene-ci/library/k8s v0.0.0-20260818125225-53c0c80d1fbb
-	github.com/graphene-ci/pipeline v0.0.0-20260818133917-cea41748d6b4
+	github.com/graphene-ci/library/docker v0.0.0-20260818151603-e679c4c20cc3
+	github.com/graphene-ci/library/k8s v0.0.0-20260818151603-e679c4c20cc3
+	github.com/graphene-ci/pipeline v0.0.0-20260818144554-48ca5450afca
 	github.com/yandex-cloud/crossplane-provider-yc v0.14.0
 	k8s.io/apimachinery v0.36.3
 )
@@ -67,7 +67,7 @@ require (
 	github.com/google/gnostic-models v0.7.1 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/graphene-ci/temporal-entity v0.0.0-20260817131052-5b5aa3527ca8 // indirect
+	github.com/graphene-ci/temporal-entity v0.0.0-20260818135158-717d0ab8b0f7 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.3 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0 // indirect
 	github.com/hashicorp/go-cty v1.5.0 // indirect
