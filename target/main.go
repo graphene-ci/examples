@@ -28,10 +28,9 @@ import (
 	"os/exec"
 	"time"
 
-	xpv1 "github.com/crossplane/crossplane-runtime/v2/apis/common/v1"
 	"github.com/docker/docker/api/types/container"
+	ycapis "github.com/yandex-cloud/crossplane-provider-yc/apis"
 	compute "github.com/yandex-cloud/crossplane-provider-yc/apis/cluster/compute/v1alpha1"
-	yc "github.com/yandex-cloud/crossplane-provider-yc/apis/cluster/v1beta1"
 	vpc "github.com/yandex-cloud/crossplane-provider-yc/apis/cluster/vpc/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -69,42 +68,24 @@ func main() {
 		// values are assigned to the pipeline on the server,
 		// GitHub-style); only the name travels, the value resolves inside
 		// activities at the point of use.
-		k8sClient := k8slib.NewClientFromSecret(pipeline.Secret(ctx, "kubeconfig"))
+		// Crossplane and its provider are the USER'S cluster setup — the
+		// pipeline assumes them, it does not declare them. WithScheme
+		// teaches the client the provider's types: no hand-written
+		// TypeMeta anywhere below.
+		k8sClient := k8slib.NewClientFromSecret(pipeline.Secret(ctx, "kubeconfig"),
+			k8slib.WithScheme(ycapis.AddToScheme))
 
-		// The provider config: cloud credentials stay a SECRET INSIDE THE
-		// USER'S CLUSTER — a value never enters workflow history, so the
-		// record only points at it.
-		providerResource := k8sClient.Resource(ctx, &yc.ProviderConfig{
-			TypeMeta:   metav1.TypeMeta{APIVersion: "yandex-cloud.upjet.crossplane.io/v1beta1", Kind: "ProviderConfig"},
-			ObjectMeta: metav1.ObjectMeta{Name: "yc"},
-			Spec: yc.ProviderConfigSpec{
-				Credentials: yc.ProviderCredentials{
-					Source: xpv1.CredentialsSourceSecret,
-					CommonCredentialSelectors: xpv1.CommonCredentialSelectors{
-						SecretRef: &xpv1.SecretKeySelector{
-							SecretReference: xpv1.SecretReference{Name: "yc-creds", Namespace: "crossplane-system"},
-							Key:             "credentials",
-						},
-					},
-				},
-			},
-		})
-
-		// The provider is the parent of everything it provisions: kill it
-		// and the cascade takes the whole cloud subtree down in order.
 		net := k8sClient.Resource(ctx, &vpc.Network{
-			TypeMeta:   metav1.TypeMeta{APIVersion: "vpc.yandex-cloud.upjet.crossplane.io/v1alpha1", Kind: "Network"},
 			ObjectMeta: metav1.ObjectMeta{Name: "net"},
 			Spec: vpc.NetworkSpec{
 				ForProvider: vpc.NetworkParameters{FolderID: &params.FolderId},
 			},
-		}, pipeline.Parent(providerResource))
+		})
 
 		// Dependency = explicit Ready: the args are foreign structs with
 		// plain string fields — Ready(ctx) blocks only here; declare
 		// several resources first and Ready later for parallelism.
 		sub := k8sClient.Resource(ctx, &vpc.Subnet{
-			TypeMeta:   metav1.TypeMeta{APIVersion: "vpc.yandex-cloud.upjet.crossplane.io/v1alpha1", Kind: "Subnet"},
 			ObjectMeta: metav1.ObjectMeta{Name: "sub"},
 			Spec: vpc.SubnetSpec{
 				ForProvider: vpc.SubnetParameters{
@@ -127,7 +108,6 @@ func main() {
 		// later — the agent record had to exist before the vm, so the vm
 		// claims it as a child.
 		vm := k8sClient.Resource(ctx, &compute.Instance{
-			TypeMeta:   metav1.TypeMeta{APIVersion: "compute.yandex-cloud.upjet.crossplane.io/v1alpha1", Kind: "Instance"},
 			ObjectMeta: metav1.ObjectMeta{Name: "vm-1"},
 			Spec: compute.InstanceSpec{
 				ForProvider: compute.InstanceParameters{
