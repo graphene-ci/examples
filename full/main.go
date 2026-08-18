@@ -50,6 +50,14 @@ type Params struct {
 	ImageId  string        `json:"imageId"`
 	Work     string        `json:"work"`
 	Keep     time.Duration `json:"keep"`
+
+	// The bare machine: it already exists (a rack, somebody's VM) — the
+	// system only puts the agent on it over ssh. The host key is
+	// required deliberately: a control plane opening a root shell does
+	// not trust-on-first-use.
+	BareHost    string `json:"bareHost"`
+	BareUser    string `json:"bareUser"`
+	BareHostKey string `json:"bareHostKey"`
 }
 
 // Result is the run's output: what the UI/CLI shows for the finished
@@ -110,6 +118,17 @@ func main() {
 		// no Machine record is declared.
 		vmAgent := pipeline.NewAgent(ctx, "edge-1")
 
+		// The OTHER road to a machine: it already exists, the system's
+		// only touch is the ssh install of the agent — the same script a
+		// fresh VM gets through user-data. The key is a secret NAME; the
+		// value resolves on the server at the moment of the install.
+		bareAgent := pipeline.NewAgentViaSSH(ctx, "bare-1", pipeline.SSHInstall{
+			Address: params.BareHost,
+			User:    params.BareUser,
+			KeyRef:  pipeline.Secret(ctx, "bare-ssh-key"),
+			HostKey: params.BareHostKey,
+		})
+
 		// The agent proves itself with what the machine IS: CloudInit
 		// carries the identity into user-data, no secret leaks through
 		// metadata. The tree link is declared from whichever side exists
@@ -150,7 +169,9 @@ func main() {
 		// arguments travel only through the binding — explicit and
 		// serializable. AtMostOnce: one-shot, an undeterminable outcome is
 		// ErrUnknown, never a silent second execution.
-		report, err := pipelineactivity.Activity(ctx, vmAgent,
+		// The one-shot work runs on the bare machine; the cloud vm below
+		// hosts the docker demo — one run, two machines, one binary.
+		report, err := pipelineactivity.Activity(ctx, bareAgent,
 			pipelineactivity.ActivityFn(
 				"run-work",
 				func(ctx context.Context, work string) (string, error) {
@@ -165,9 +186,9 @@ func main() {
 			return Result{}, err
 		}
 
-		// A library activity returns a typed result like any other —
-		// usable in control flow and in the run's Result below.
-		dockerInstallReport, err := pipelineactivity.Activity(ctx, vmAgent, dockerlib.Install())
+		// A library verb is a wrapper over the Activity primitive: typed
+		// result, usable in control flow and in the run's Result below.
+		dockerInstallReport, err := dockerlib.Install(ctx, vmAgent)
 		if err != nil {
 			return Result{}, err
 		}
@@ -186,7 +207,7 @@ func main() {
 		// (an activity on the right site under the hood — the agent here;
 		// artifact.FromBytes for bytes the run computed itself).
 		reportArtifact := pipeline.NewArtifact(ctx, "perf-report",
-			artifact.FromAgentFile(vmAgent, "/var/log/perf/report.tgz"),
+			artifact.FromAgentFile(bareAgent, "/var/log/perf/report.tgz"),
 		)
 
 		// Long life is a TRANSFER, not a sleep: the pipeline's Stand
