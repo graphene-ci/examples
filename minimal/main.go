@@ -1,44 +1,43 @@
 // Command minimal is the story of ../full told with TODAY'S surface of
-// the pipeline library: typed params, a cloud machine owned by the run,
-// work executed on it, teardown by the run's end (or a keep window
-// first). Everything the full sketch has beyond this — chained resource
-// outputs, provider libraries, agent libraries — is future surface.
+// the pipeline library: pipeline.Main as the entry point, typed params, a
+// machine record linked to a real machine, one-shot work on it, teardown
+// by the run's end. Everything the full sketch has beyond this — chained
+// crossplane resources through k8slib, provider libraries, agent
+// libraries — is future surface.
 package main
 
 import (
-	"fmt"
-	"log"
 	"time"
 
-	"go.temporal.io/sdk/client"
-	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
 
 	"github.com/graphene-ci/pipeline/pkg/id"
 	"github.com/graphene-ci/pipeline/pkg/pipeline"
-	"github.com/graphene-ci/pipeline/pkg/wire"
+	"github.com/graphene-ci/pipeline/pkg/ref"
 )
 
 // Params is the typed input of the run: the UI form and submit validation
 // derive from this type.
 type Params struct {
-	Zone     string `json:"zone"`
-	Image    string `json:"image"`
-	Cores    int    `json:"cores"`
-	MemoryGB int    `json:"memoryGB"`
+	// Host and User locate the existing machine the agent is installed
+	// on over ssh (the full sketch creates a VM with crossplane instead
+	// and feeds it pipeline.AgentUserData through user-data).
+	Host string `json:"host"`
+	User string `json:"user"`
+	// HostKey is the machine's public key; required — no trust-on-first-use.
+	HostKey string `json:"hostKey"`
 
 	// Work is the command whose output becomes the report.
 	Work string `json:"work"`
 
-	// Keep leaves the machine standing after the work for this long —
-	// for the morning when somebody wants to look at what failed.
+	// Keep leaves the machine record standing after the work for this
+	// long — for the morning when somebody wants to look at what failed.
 	Keep time.Duration `json:"keep"`
 }
 
-// RunWork executes the work command on the machine. It is a registered
-// named function — it runs inside the per-(machine × run) container
-// hosted by the agent, so this is ordinary local code with the machine
-// under its feet.
+// RunWork executes the work on the machine: a named registered function
+// running inside the per-(machine × run) container hosted by the agent —
+// ordinary local code with the machine under its feet.
 func RunWork(work string) (string, error) {
 	// exec.Command(...) here in real life; the sketch keeps it visible.
 	return "report of: " + work, nil
@@ -49,31 +48,30 @@ func RunWork(work string) (string, error) {
 func PerfPipeline(ctx workflow.Context, params Params) (string, error) {
 	mid := id.MachineId("vm-" + string(pipeline.RunId(ctx)))
 
-	// Declare the machine; the run owns it — the run's end tears it down
-	// even if everything below fails.
-	_, err := pipeline.Machine(ctx, mid, pipeline.MachineSpec{
-		Cloud: &pipeline.CloudSource{
-			Provider: "yandex",
-			Params: map[string]string{
-				"zone":     params.Zone,
-				"image":    params.Image,
-				"cores":    fmt.Sprint(params.Cores),
-				"memoryGB": fmt.Sprint(params.MemoryGB),
-			},
-		},
+	// Declare the machine record: a LINK to an existing machine, with the
+	// agent installed over ssh. The handle returns immediately; several
+	// declarations in a row would converge in parallel.
+	machine := pipeline.MachineViaSSH(ctx, mid, pipeline.SSHInstall{
+		Address: params.Host,
+		User:    params.User,
+		KeyRef:  ref.SecretRef{Name: "ssh-key"},
+		HostKey: params.HostKey,
 	})
-	if err != nil {
+
+	// Outputs exist only behind Ready: the first read blocks until the
+	// agent has connected.
+	if _, err := machine.Ready(ctx); err != nil {
 		return "", err
 	}
 
-	// One-shot work on the machine: at most once, an undeterminable
+	// One-shot work on the machine: at most once; an undeterminable
 	// outcome is ErrUnknown — never a silent second execution.
 	var report string
 	if err := pipeline.Action(ctx, mid, pipeline.ExecOptions{}, RunWork, params.Work).Get(ctx, &report); err != nil {
 		return "", err
 	}
 
-	// Keep window: the machine stands for a while after the work.
+	// Keep window: the record (and the agent link) stands for a while.
 	if params.Keep > 0 {
 		if err := workflow.Sleep(ctx, params.Keep); err != nil {
 			return "", err
@@ -83,23 +81,10 @@ func PerfPipeline(ctx workflow.Context, params Params) (string, error) {
 }
 
 func main() {
-	if err := run(); err != nil {
-		log.Fatal(err)
-	}
-}
-
-func run() error {
-	c, err := client.Dial(client.Options{})
-	if err != nil {
-		return err
-	}
-	defer c.Close()
-
-	// The run worker side of the same binary. The machine-side container
-	// registers RunWork on the machine's run queue; the wiring of roles
-	// (managed / inplace / on-machine) is the Serve() surface to come.
-	w := worker.New(c, wire.RunQueue("dev"), worker.Options{})
-	w.RegisterWorkflow(PerfPipeline)
-	w.RegisterActivity(RunWork)
-	return w.Run(worker.InterruptCh())
+	// One main == one pipeline. The role (run worker / machine container)
+	// and the wiring come from the environment set by the server, the
+	// agent, or the CLI.
+	pipeline.Main("perf", PerfPipeline,
+		pipeline.WithMachineFunctions(RunWork),
+	)
 }
