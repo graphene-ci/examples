@@ -2,8 +2,10 @@ module github.com/graphene-ci/examples/minimal
 
 go 1.25.7
 
+// Pinned to the pre-v2 pipeline surface; the rewrite onto surface v2 is
+// pending.
 require (
-	github.com/graphene-ci/pipeline v0.0.0-20260817160650-3a099c6b34f0
+	github.com/graphene-ci/pipeline v0.0.0-20260818094020-5042435778ba
 	go.temporal.io/sdk v1.47.0
 )
 
