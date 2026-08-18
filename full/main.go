@@ -199,11 +199,7 @@ func main() {
 		if err != nil {
 			return Result{}, err
 		}
-		targets := make([]pipelineactivity.Target, len(edges))
-		for i, a := range edges {
-			targets[i] = a
-		}
-		installReports, err := pipelineactivity.ActivityAll(ctx, targets, dockerlib.Install())
+		installReports, err := pipelineactivity.ActivityAll(ctx, edges, dockerlib.Install())
 		if err != nil {
 			return Result{}, err
 		}
