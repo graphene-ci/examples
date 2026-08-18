@@ -63,10 +63,11 @@ type Params struct {
 // Result is the run's output: what the UI/CLI shows for the finished
 // run. Small values only — big data goes through artifacts.
 type Result struct {
-	Report        string `json:"report"`
-	DockerVersion string `json:"dockerVersion"`
-	ContainerId   string `json:"containerId"`
-	VmId          string `json:"vmId"`
+	Report         string `json:"report"`
+	DockerVersion  string `json:"dockerVersion"`
+	ContainerId    string `json:"containerId"`
+	VmId           string `json:"vmId"`
+	BaselineDigest string `json:"baselineDigest"`
 }
 
 func main() {
@@ -116,7 +117,8 @@ func main() {
 		// Machine (the real hardware) is a DIFFERENT resource we do not
 		// operate; here the real machine is the crossplane vm below, so
 		// no Machine record is declared.
-		vmAgent := pipeline.NewAgent(ctx, "edge-1")
+		vmAgent := pipeline.NewAgent(ctx, "edge-1",
+			pipeline.WithLabels(map[string]string{"role": "edge"}))
 
 		// The OTHER road to a machine: it already exists, the system's
 		// only touch is the ssh install of the agent — the same script a
@@ -127,7 +129,7 @@ func main() {
 			User:    params.BareUser,
 			KeyRef:  pipeline.Secret(ctx, "bare-ssh-key"),
 			HostKey: params.BareHostKey,
-		})
+		}, pipeline.WithLabels(map[string]string{"role": "edge"}))
 
 		// The agent proves itself with what the machine IS: CloudInit
 		// carries the identity into user-data, no secret leaks through
@@ -186,12 +188,29 @@ func main() {
 			return Result{}, err
 		}
 
-		// A library verb is a wrapper over the Activity primitive: typed
-		// result, usable in control flow and in the run's Result below.
-		dockerInstallReport, err := dockerlib.Install(ctx, vmAgent)
+		// "Run it on all who are marked": select by record labels (a
+		// snapshot; the selection is FOREIGN — no ownership taken), then
+		// one call on every agent in parallel. The library verb is a
+		// Call — the same value serves Activity and ActivityAll. The
+		// install body itself publishes capability "docker" onto each
+		// machine's record — written down where it happened.
+		edges, err := pipeline.SelectAgents(ctx,
+			pipeline.WithLabels(map[string]string{"role": "edge"}))
 		if err != nil {
 			return Result{}, err
 		}
+		targets := make([]pipelineactivity.Target, len(edges))
+		for i, a := range edges {
+			targets[i] = a
+		}
+		installReports, err := pipelineactivity.ActivityAll(ctx, targets, dockerlib.Install())
+		if err != nil {
+			return Result{}, err
+		}
+
+		// A resource made by ANOTHER pipeline: recognized, never created,
+		// never owned — and its blob is right there to fetch.
+		baseline := pipeline.AttachArtifact(ctx, "baseline-report")
 
 		// The library sets Parent(vmAgent) itself — the container is an
 		// ORDINARY resource in the tree (visible in CLI/UI), only the
@@ -218,9 +237,10 @@ func main() {
 		pipeline.ToStand(ctx, reportArtifact)
 
 		result := Result{
-			Report:        report,
-			DockerVersion: dockerInstallReport.Version,
-			ContainerId:   dockerContainer.Ready(ctx).Id,
+			Report:         report,
+			DockerVersion:  installReports[0].Version,
+			ContainerId:    dockerContainer.Ready(ctx).Id,
+			BaselineDigest: baseline.Ready(ctx).Blob.Digest,
 		}
 		if vmId != nil {
 			result.VmId = *vmId
