@@ -6,7 +6,7 @@ require (
 	github.com/crossplane/crossplane-runtime/v2 v2.0.0-20250730220209-c306b1c8b181
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/graphene-ci/library/docker v0.0.0-20260818121339-17efd66e8205
-	github.com/graphene-ci/library/k8s v0.0.0-20260818125132-93065e11d5b6
+	github.com/graphene-ci/library/k8s v0.0.0-20260818125225-53c0c80d1fbb
 	github.com/graphene-ci/pipeline v0.0.0-20260818124143-26d7382857c8
 	github.com/yandex-cloud/crossplane-provider-yc v0.14.0
 	k8s.io/apimachinery v0.36.3
