@@ -3,10 +3,11 @@ module github.com/graphene-ci/examples
 go 1.26.5
 
 require (
+	github.com/crossplane/crossplane-runtime/v2 v2.0.0-20250730220209-c306b1c8b181
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/graphene-ci/library/docker v0.0.0-20260818121339-17efd66e8205
-	github.com/graphene-ci/library/k8s v0.0.0-20260818122344-efd3809ec835
-	github.com/graphene-ci/pipeline v0.0.0-20260818120651-5a95ca33a7d0
+	github.com/graphene-ci/library/k8s v0.0.0-20260818124551-bcf68970ad6f
+	github.com/graphene-ci/pipeline v0.0.0-20260818124143-26d7382857c8
 	github.com/yandex-cloud/crossplane-provider-yc v0.14.0
 	k8s.io/apimachinery v0.36.3
 )
@@ -26,7 +27,6 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
-	github.com/crossplane/crossplane-runtime/v2 v2.0.0-20250730220209-c306b1c8b181 // indirect
 	github.com/crossplane/crossplane-tools v0.0.0-20250731192036-00d407d8b7ec // indirect
 	github.com/crossplane/upjet/v2 v2.1.0 // indirect
 	github.com/dave/jennifer v1.7.1 // indirect
@@ -56,6 +56,7 @@ require (
 	github.com/google/gnostic-models v0.7.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
+	github.com/graphene-ci/temporal-entity v0.0.0-20260817131052-5b5aa3527ca8 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.2 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0 // indirect
 	github.com/hashicorp/go-cty v1.5.0 // indirect

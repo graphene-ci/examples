@@ -28,6 +28,7 @@ import (
 	"os/exec"
 	"time"
 
+	xpv1 "github.com/crossplane/crossplane-runtime/v2/apis/common/v1"
 	"github.com/docker/docker/api/types/container"
 	ycapis "github.com/yandex-cloud/crossplane-provider-yc/apis"
 	compute "github.com/yandex-cloud/crossplane-provider-yc/apis/cluster/compute/v1alpha1"
@@ -57,6 +58,7 @@ type Result struct {
 	Report        string `json:"report"`
 	DockerVersion string `json:"dockerVersion"`
 	ContainerId   string `json:"containerId"`
+	VmId          string `json:"vmId"`
 }
 
 func main() {
@@ -75,26 +77,32 @@ func main() {
 		k8sClient := k8slib.NewClientFromSecret(pipeline.Secret(ctx, "kubeconfig"),
 			k8slib.WithScheme(ycapis.AddToScheme))
 
-		net := k8sClient.Resource(ctx, &vpc.Network{
+		// Every k8s resource is a temporal-entity typed by OUR OWN type:
+		// apply + converge, drift healing on a tick, delete on teardown.
+		// Ready(ctx) returns the LIVE typed object — real ids come from
+		// Status, put there by the provider, never invented by us.
+		net := k8slib.Resource(ctx, k8sClient, &vpc.Network{
 			ObjectMeta: metav1.ObjectMeta{Name: "net"},
 			Spec: vpc.NetworkSpec{
 				ForProvider: vpc.NetworkParameters{FolderID: &params.FolderId},
 			},
 		})
 
-		// Dependency = explicit Ready: the args are foreign structs with
-		// plain string fields — Ready(ctx) blocks only here; declare
-		// several resources first and Ready later for parallelism.
-		sub := k8sClient.Resource(ctx, &vpc.Subnet{
+		// Cross-resource wiring uses the provider's NATIVE Ref fields:
+		// the cluster resolves the reference itself when the network is
+		// ready — the real id never travels through workflow history and
+		// cannot be wrong. Explicit Ready stays for WAITING and for
+		// reading live status.
+		sub := k8slib.Resource(ctx, k8sClient, &vpc.Subnet{
 			ObjectMeta: metav1.ObjectMeta{Name: "sub"},
 			Spec: vpc.SubnetSpec{
 				ForProvider: vpc.SubnetParameters{
-					NetworkID:    ptr(net.Ready(ctx).Id),
+					NetworkIDRef: &xpv1.Reference{Name: "net"},
 					Zone:         &params.Zone,
 					V4CidrBlocks: []*string{ptr("10.0.0.0/24")},
 				},
 			},
-		}, pipeline.Parent(net))
+		}, k8slib.WithTree[vpc.Subnet](pipeline.Parent(net)))
 
 		// Agent — OUR resource: record + identity of the process we run.
 		// Machine (the real hardware) is a DIFFERENT resource we do not
@@ -107,7 +115,10 @@ func main() {
 		// metadata. The tree link is declared from whichever side exists
 		// later — the agent record had to exist before the vm, so the vm
 		// claims it as a child.
-		vm := k8sClient.Resource(ctx, &compute.Instance{
+		// The kind's knowledge is the USER'S, typed: readiness beyond the
+		// default Ready-condition convention when needed — symmetric to a
+		// temporal-entity kind definition.
+		vm := k8slib.Resource(ctx, k8sClient, &compute.Instance{
 			ObjectMeta: metav1.ObjectMeta{Name: "vm-1"},
 			Spec: compute.InstanceSpec{
 				ForProvider: compute.InstanceParameters{
@@ -117,13 +128,23 @@ func main() {
 						InitializeParams: []compute.InitializeParamsParameters{{ImageID: &params.ImageId, Size: ptr(20.0)}},
 					}},
 					NetworkInterface: []compute.NetworkInterfaceParameters{{
-						SubnetID: ptr(sub.Ready(ctx).Id),
-						NAT:      ptr(true),
+						SubnetIDRef: &xpv1.Reference{Name: "sub"},
+						NAT:         ptr(true),
 					}},
 					Metadata: map[string]*string{"user-data": ptr(vmAgent.CloudInit())},
 				},
 			},
-		}, pipeline.Children(vmAgent))
+		},
+			k8slib.WithReady(func(live *compute.Instance) bool {
+				return live.Status.AtProvider.Status != nil && *live.Status.AtProvider.Status == "running"
+			}),
+			k8slib.WithTree[compute.Instance](pipeline.Children(vmAgent)),
+		)
+
+		// Waiting is explicit — and the wait pays off in TYPED status:
+		// the provider's own field, not our guess.
+		_ = sub.Ready(ctx)
+		vmId := vm.Ready(ctx).Status.AtProvider.ID
 
 		// Inline user activity: name + body right where they are needed;
 		// arguments travel only through the binding — explicit and
@@ -175,11 +196,15 @@ func main() {
 		pipeline.ToStand(ctx, vm, pipeline.KeepFor(params.Keep))
 		pipeline.ToStand(ctx, reportArtifact)
 
-		return Result{
+		result := Result{
 			Report:        report,
 			DockerVersion: dockerInstallReport.Version,
 			ContainerId:   dockerContainer.Ready(ctx).Id,
-		}, nil
+		}
+		if vmId != nil {
+			result.VmId = *vmId
+		}
+		return result, nil
 	})
 }
 
