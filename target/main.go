@@ -102,7 +102,7 @@ func main() {
 					V4CidrBlocks: []*string{ptr("10.0.0.0/24")},
 				},
 			},
-		}, k8slib.WithTree[vpc.Subnet](pipeline.Parent(net)))
+		}, k8slib.WithPipelineOptions[vpc.Subnet](pipeline.Parent(net)))
 
 		// Agent — OUR resource: record + identity of the process we run.
 		// Machine (the real hardware) is a DIFFERENT resource we do not
@@ -138,7 +138,7 @@ func main() {
 			k8slib.WithReady(func(live *compute.Instance) bool {
 				return live.Status.AtProvider.Status != nil && *live.Status.AtProvider.Status == "running"
 			}),
-			k8slib.WithTree[compute.Instance](pipeline.Children(vmAgent)),
+			k8slib.WithPipelineOptions[compute.Instance](pipeline.Children(vmAgent)),
 		)
 
 		// Waiting is explicit — and the wait pays off in TYPED status:
