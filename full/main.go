@@ -25,6 +25,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"os/exec"
 	"time"
 
@@ -40,11 +41,15 @@ import (
 	pipelineactivity "github.com/graphene-ci/pipeline/pkg/activity"
 	"github.com/graphene-ci/pipeline/pkg/artifact"
 	"github.com/graphene-ci/pipeline/pkg/pipeline"
+	"github.com/graphene-ci/pipeline/pkg/trigger"
 )
 
 // Params is the typed input of the run: the UI form and submit
 // validation derive from this type.
 type Params struct {
+	// Event receives a webhook trigger's request body (reserved name).
+	Event json.RawMessage `json:"event,omitempty"`
+
 	FolderId string        `json:"folderId"`
 	Zone     string        `json:"zone"`
 	ImageId  string        `json:"imageId"`
@@ -71,7 +76,30 @@ type Result struct {
 }
 
 func main() {
-	pipeline.Main("perf-nightly", func(ctx pipeline.Context, params Params) (Result, error) {
+	pipeline.Main("perf-nightly", run,
+		pipeline.WithTriggers(
+			trigger.Cron("0 3 * * *", trigger.Params(map[string]any{
+				"folderId": "cron", "zone": "z", "imageId": "i",
+				"work": "true", "keep": "1m",
+				"bareHost": "h", "bareUser": "u", "bareHostKey": "k",
+			})),
+			trigger.Webhook("push", trigger.HookSecret("gh-hook"),
+				trigger.Params(map[string]any{
+					"folderId": "hook", "zone": "z", "imageId": "i",
+					"work": "true", "keep": "1m",
+					"bareHost": "h", "bareUser": "u", "bareHostKey": "k",
+				})),
+		),
+		pipeline.WithConcurrency(pipeline.Queue),
+	)
+}
+
+func run(ctx pipeline.Context, params Params) (Result, error) {
+	return runBody(ctx, params)
+}
+
+func runBody(ctx pipeline.Context, params Params) (Result, error) {
+	return func(ctx pipeline.Context, params Params) (Result, error) {
 
 		// ctx carries ONLY what does not exist outside a run (RunId,
 		// Logger); everything that acts is a free function taking ctx
@@ -242,7 +270,7 @@ func main() {
 			result.VmId = *vmId
 		}
 		return result, nil
-	})
+	}(ctx, params)
 }
 
 // ptr is the small price of foreign specs made of pointers.
