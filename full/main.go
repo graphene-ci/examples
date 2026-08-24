@@ -241,6 +241,12 @@ func runBody(ctx pipeline.Context, params Params) (Result, error) {
 			return Result{}, err
 		}
 
+		// The pipeline's OWN agent must be ready before a label snapshot
+		// can see it: the selection below reads READY records — racing
+		// it against the vm agent's connect handed the docker install
+		// to the bare machine only.
+		_ = vmAgent.Ready(ctx)
+
 		// "Run it on all who are marked": select by record labels (a
 		// snapshot; the selection is FOREIGN — no ownership taken), then
 		// one call on every agent in parallel. The library verb is a
