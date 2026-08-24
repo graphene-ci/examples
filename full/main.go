@@ -26,7 +26,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"os/exec"
 	"time"
 
 	xpv1 "github.com/crossplane/crossplane-runtime/v2/apis/common/v1"
@@ -34,12 +33,12 @@ import (
 	ycapis "github.com/yandex-cloud/crossplane-provider-yc/apis"
 	compute "github.com/yandex-cloud/crossplane-provider-yc/apis/cluster/compute/v1alpha1"
 	vpc "github.com/yandex-cloud/crossplane-provider-yc/apis/cluster/vpc/v1alpha1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	dockerlib "github.com/graphene-ci/library/docker"
 	k8slib "github.com/graphene-ci/library/k8s"
 	pipelineactivity "github.com/graphene-ci/pipeline/pkg/activity"
 	"github.com/graphene-ci/pipeline/pkg/artifact"
+	"github.com/graphene-ci/pipeline/pkg/machine"
 	"github.com/graphene-ci/pipeline/pkg/pipeline"
 	"github.com/graphene-ci/pipeline/pkg/trigger"
 )
@@ -63,6 +62,11 @@ type Params struct {
 	BareHost    string `json:"bareHost"`
 	BareUser    string `json:"bareUser"`
 	BareHostKey string `json:"bareHostKey"`
+	// A secret-typed param: the NAME of a secret in the installation's
+	// store travels; the schema marks the field, the door checks the
+	// name exists before the run starts, the value resolves on the
+	// server at the point of use.
+	BareKey pipeline.SecretRef `json:"bareKey"`
 }
 
 // Result is the run's output: what the UI/CLI shows for the finished
@@ -78,16 +82,33 @@ type Result struct {
 func main() {
 	pipeline.Main("perf-nightly", run,
 		pipeline.WithTriggers(
-			trigger.Cron("0 3 * * *", trigger.Params(map[string]any{
-				"folderId": "cron", "zone": "z", "imageId": "i",
-				"work": "true", "keep": "1m",
-				"bareHost": "h", "bareUser": "u", "bareHostKey": "k",
+			// Trigger params are the pipeline's OWN Params type —
+			// pipeline.Main refuses a drifted declaration at startup.
+			// Environment values are REFERENCES (pipeline.Var,
+			// pipeline.UseSecret), assigned on the installation — the
+			// declaration carries no cloud ids and no key material.
+			trigger.Cron("0 3 * * *", trigger.Params(Params{
+				FolderId:    pipeline.Var("yc-folder"),
+				Zone:        pipeline.Var("yc-zone"),
+				ImageId:     pipeline.Var("yc-image"),
+				Work:        "uname -a > /var/log/perf/nightly.txt",
+				Keep:        10 * time.Minute,
+				BareHost:    pipeline.Var("bare-host"),
+				BareUser:    pipeline.Var("bare-user"),
+				BareHostKey: pipeline.Var("bare-host-key"),
+				BareKey:     pipeline.UseSecret("bare-ssh-key"),
 			})),
 			trigger.Webhook("push", trigger.HookSecret("gh-hook"),
-				trigger.Params(map[string]any{
-					"folderId": "hook", "zone": "z", "imageId": "i",
-					"work": "true", "keep": "1m",
-					"bareHost": "h", "bareUser": "u", "bareHostKey": "k",
+				trigger.Params(Params{
+					FolderId:    pipeline.Var("yc-folder"),
+					Zone:        pipeline.Var("yc-zone"),
+					ImageId:     pipeline.Var("yc-image"),
+					Work:        "uname -a > /var/log/perf/hook.txt",
+					Keep:        10 * time.Minute,
+					BareHost:    pipeline.Var("bare-host"),
+					BareUser:    pipeline.Var("bare-user"),
+					BareHostKey: pipeline.Var("bare-host-key"),
+					BareKey:     pipeline.UseSecret("bare-ssh-key"),
 				})),
 		),
 		pipeline.WithConcurrency(pipeline.Queue),
@@ -118,8 +139,7 @@ func runBody(ctx pipeline.Context, params Params) (Result, error) {
 		// apply + converge, drift healing on a tick, delete on teardown.
 		// Ready(ctx) returns the LIVE typed object — real ids come from
 		// Status, put there by the provider, never invented by us.
-		net := k8slib.Resource(ctx, k8sClient, &vpc.Network{
-			ObjectMeta: metav1.ObjectMeta{Name: "net"},
+		net := k8slib.Resource(ctx, k8sClient, "net", &vpc.Network{
 			Spec: vpc.NetworkSpec{
 				ForProvider: vpc.NetworkParameters{FolderID: &params.FolderId},
 			},
@@ -130,8 +150,7 @@ func runBody(ctx pipeline.Context, params Params) (Result, error) {
 		// ready — the real id never travels through workflow history and
 		// cannot be wrong. Explicit Ready stays for WAITING and for
 		// reading live status.
-		sub := k8slib.Resource(ctx, k8sClient, &vpc.Subnet{
-			ObjectMeta: metav1.ObjectMeta{Name: "sub"},
+		sub := k8slib.Resource(ctx, k8sClient, "sub", &vpc.Subnet{
 			Spec: vpc.SubnetSpec{
 				ForProvider: vpc.SubnetParameters{
 					NetworkIDRef: &xpv1.Reference{Name: "net"},
@@ -155,7 +174,7 @@ func runBody(ctx pipeline.Context, params Params) (Result, error) {
 		bareAgent := pipeline.NewAgentViaSSH(ctx, "bare-1", pipeline.SSHInstall{
 			Address: params.BareHost,
 			User:    params.BareUser,
-			KeyRef:  pipeline.Secret(ctx, "bare-ssh-key"),
+			KeyRef:  params.BareKey,
 			HostKey: params.BareHostKey,
 		}, pipeline.WithLabels(map[string]string{"role": "edge"}))
 
@@ -167,8 +186,7 @@ func runBody(ctx pipeline.Context, params Params) (Result, error) {
 		// The kind's knowledge is the USER'S, typed: readiness beyond the
 		// default Ready-condition convention when needed — symmetric to a
 		// temporal-entity kind definition.
-		vm := k8slib.Resource(ctx, k8sClient, &compute.Instance{
-			ObjectMeta: metav1.ObjectMeta{Name: "vm-1"},
+		vm := k8slib.Resource(ctx, k8sClient, "vm-1", &compute.Instance{
 			Spec: compute.InstanceSpec{
 				ForProvider: compute.InstanceParameters{
 					Zone:      &params.Zone,
@@ -205,7 +223,10 @@ func runBody(ctx pipeline.Context, params Params) (Result, error) {
 			pipelineactivity.ActivityFn(
 				"run-work",
 				func(ctx context.Context, work string) (string, error) {
-					out, err := exec.CommandContext(ctx, "sh", "-c", work).CombinedOutput()
+					// Work runs ON THE MACHINE: machine.Command chroots
+					// into the host's filesystem — the distroless
+					// executor image itself has no shell.
+					out, err := machine.Command(ctx, "/bin/sh", "-c", work).CombinedOutput()
 					return string(out), err
 				},
 				params.Work,
@@ -241,7 +262,7 @@ func runBody(ctx pipeline.Context, params Params) (Result, error) {
 		// sugar hides it from this code. The spec is docker's own types.
 		dockerContainer := dockerlib.Container(ctx, vmAgent, dockerlib.Spec{
 			Name:   "hello",
-			Config: &container.Config{Image: "nginx:alpine"},
+			Config: &container.Config{Image: "mirror.gcr.io/library/nginx:alpine"},
 			Host:   &container.HostConfig{RestartPolicy: container.RestartPolicy{Name: container.RestartPolicyAlways}},
 		})
 
