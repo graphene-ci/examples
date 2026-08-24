@@ -205,7 +205,11 @@ func runBody(ctx pipeline.Context, params Params) (Result, error) {
 			k8slib.WithReady(func(live *compute.Instance) bool {
 				return live.Status.AtProvider.Status != nil && *live.Status.AtProvider.Status == "running"
 			}),
-			k8slib.WithResourceOption[compute.Instance](pipeline.Children(vmAgent)),
+			// Parent(sub) declares the DEPENDENCY in the tree: the vm,
+			// its subnet, and the network are one chain — handing the vm
+			// to the stand moves the chain's root, so a finishing run
+			// never strands the subnet under itself.
+			k8slib.WithResourceOption[compute.Instance](pipeline.Parent(sub), pipeline.Children(vmAgent)),
 		)
 
 		// Waiting is explicit — and the wait pays off in TYPED status:
