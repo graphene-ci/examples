@@ -92,5 +92,7 @@ func main() {
 	// One main == one pipeline. The role (run worker / machine
 	// container) and the wiring come from the environment the server,
 	// the agent or the CLI sets.
-	pipeline.Main("minimal", run)
+	// The name IS the pipeline record's name: the door starts the run
+	// workflow by the record, and the worker must answer to it.
+	pipeline.Main("baseline", run)
 }
