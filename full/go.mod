@@ -7,7 +7,7 @@ require (
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/graphene-ci/library/docker v0.0.0-20260826115634-e39f4fc0b29a
 	github.com/graphene-ci/library/k8s v0.0.0-20260826115634-e39f4fc0b29a
-	github.com/graphene-ci/pipeline v0.0.0-20260826114507-ee5a2600b6cc
+	github.com/graphene-ci/pipeline v0.0.0-20260826125506-88df493ccdd0
 	github.com/yandex-cloud/crossplane-provider-yc v0.14.0
 )
 

@@ -1,12 +1,12 @@
 module github.com/graphene-ci/examples/minimal
 
-go 1.25.7
+go 1.26.5
 
 // Pinned to the pre-v2 pipeline surface; the rewrite onto surface v2 is
 // pending.
 require (
-	github.com/graphene-ci/pipeline v0.0.0-20260825232901-b48df9d1db4b
-	go.temporal.io/sdk v1.47.0 // indirect
+	github.com/graphene-ci/pipeline v0.0.0-20260826125506-88df493ccdd0
+	go.temporal.io/sdk v1.47.0
 )
 
 require (
@@ -60,10 +60,10 @@ require (
 	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.40.0 // indirect
-	golang.org/x/time v0.3.0 // indirect
+	golang.org/x/time v0.14.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260803160001-6ac0973c030d // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260803160001-6ac0973c030d // indirect
 	google.golang.org/grpc v1.83.0 // indirect
-	google.golang.org/protobuf v1.36.11 // indirect
+	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
