@@ -1,73 +1,81 @@
-// Command minimal is the story of ../full told with TODAY'S surface of
-// the pipeline library: pipeline.Main as the entry point, typed params, a
-// machine record linked to a real machine, one-shot work on it, teardown
-// by the run's end. Everything the full sketch has beyond this — chained
-// crossplane resources through k8slib, provider libraries, agent
-// libraries — is future surface.
+// Command minimal is the smallest complete pipeline: typed params, an
+// agent installed on a machine that already exists, one-shot work on
+// it, teardown when the run ends. Everything ../full has beyond this —
+// crossplane resources through k8slib, provider libraries, triggers —
+// is the same surface used more.
 package main
 
 import (
+	"context"
 	"time"
 
 	"go.temporal.io/sdk/workflow"
 
-	"github.com/graphene-ci/pipeline/pkg/id"
+	pipelineactivity "github.com/graphene-ci/pipeline/pkg/activity"
+	"github.com/graphene-ci/pipeline/pkg/machine"
 	"github.com/graphene-ci/pipeline/pkg/pipeline"
 	"github.com/graphene-ci/pipeline/pkg/ref"
 )
 
-// Params is the typed input of the run: the UI form and submit validation
-// derive from this type.
+// Params is the typed input of the run: the UI form and the submit
+// validation both derive from this type.
 type Params struct {
 	// Host and User locate the existing machine the agent is installed
-	// on over ssh (the full sketch creates a VM with crossplane instead
-	// and feeds it pipeline.AgentUserData through user-data).
+	// on over ssh (../full creates a VM with crossplane instead and
+	// feeds it the agent's CloudInit through user-data).
 	Host string `json:"host"`
 	User string `json:"user"`
-	// HostKey is the machine's public key; required — no trust-on-first-use.
+	// HostKey is the machine's public key; required — no
+	// trust-on-first-use.
 	HostKey string `json:"hostKey"`
+	// Key names the secret holding the ssh private key. Only the NAME
+	// travels; the value resolves on the server at the moment of the
+	// install.
+	Key ref.SecretRef `json:"key"`
 
 	// Work is the command whose output becomes the report.
 	Work string `json:"work"`
 
-	// Keep leaves the machine record standing after the work for this
-	// long — for the morning when somebody wants to look at what failed.
+	// Keep leaves the agent record standing after the work for this
+	// long — for the morning when somebody wants to look at what
+	// failed.
 	Keep time.Duration `json:"keep"`
 }
 
-// RunWork executes the work on the machine: a named registered function
-// running inside the per-(machine × run) container hosted by the agent —
-// ordinary local code with the machine under its feet.
-func RunWork(work string) (string, error) {
-	// exec.Command(...) here in real life; the sketch keeps it visible.
-	return "report of: " + work, nil
-}
-
-// PerfPipeline is the run: an ordinary Temporal workflow using the
-// pipeline library.
-func PerfPipeline(ctx workflow.Context, params Params) (string, error) {
-	mid := id.MachineId("vm-" + string(pipeline.RunId(ctx)))
-
-	// Declare the machine record: a LINK to an existing machine, with the
-	// agent installed over ssh. The handle returns immediately; several
-	// declarations in a row would converge in parallel.
-	machine := pipeline.MachineViaSSH(ctx, mid, pipeline.SSHInstall{
+// run is the pipeline: an ordinary workflow written with the library.
+func run(ctx pipeline.Context, params Params) (string, error) {
+	// Declare the agent: a machine that ALREADY exists, whose only
+	// touch by the system is the ssh install. The handle returns
+	// immediately; several declarations in a row converge in parallel.
+	agent := pipeline.NewAgentViaSSH(ctx, "bare-"+string(ctx.RunId()), pipeline.SSHInstall{
 		Address: params.Host,
 		User:    params.User,
-		KeyRef:  ref.SecretRef{Name: "ssh-key"},
+		KeyRef:  params.Key,
 		HostKey: params.HostKey,
 	})
 
 	// Outputs exist only behind Ready: the first read blocks until the
 	// agent has connected.
-	if _, err := machine.Ready(ctx); err != nil {
+	if _, err := agent.TryReady(ctx); err != nil {
 		return "", err
 	}
 
-	// One-shot work on the machine: at most once; an undeterminable
-	// outcome is ErrUnknown — never a silent second execution.
-	var report string
-	if err := pipeline.Action(ctx, mid, pipeline.ExecOptions{}, RunWork, params.Work).Get(ctx, &report); err != nil {
+	// One-shot work ON the machine. AtMostOnce: an undeterminable
+	// outcome is an error, never a silent second execution.
+	report, err := pipelineactivity.Activity(ctx, agent,
+		pipelineactivity.ActivityFn(
+			"run-work",
+			func(ctx context.Context, work string) (string, error) {
+				// machine.Command chroots into the host's filesystem —
+				// the executor image itself has no shell.
+				out, err := machine.Command(ctx, "/bin/sh", "-c", work).CombinedOutput()
+				return string(out), err
+			},
+			params.Work,
+		),
+		pipelineactivity.WithGuarantee(pipelineactivity.AtMostOnce),
+	)
+	if err != nil {
 		return "", err
 	}
 
@@ -81,10 +89,8 @@ func PerfPipeline(ctx workflow.Context, params Params) (string, error) {
 }
 
 func main() {
-	// One main == one pipeline. The role (run worker / machine container)
-	// and the wiring come from the environment set by the server, the
-	// agent, or the CLI.
-	pipeline.Main("perf", PerfPipeline,
-		pipeline.WithMachineFunctions(RunWork),
-	)
+	// One main == one pipeline. The role (run worker / machine
+	// container) and the wiring come from the environment the server,
+	// the agent or the CLI sets.
+	pipeline.Main("minimal", run)
 }
