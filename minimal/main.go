@@ -51,7 +51,7 @@ func run(ctx pipeline.Context, params Params) (string, error) {
 	// Declare the agent: a machine that ALREADY exists, whose only
 	// touch by the system is the ssh install. The handle returns
 	// immediately; several declarations in a row converge in parallel.
-	agent := pipeline.NewAgentViaSSH(ctx, p.Agent, pipeline.SSHInstall{
+	agent := pipeline.NewAgentViaSSH(ctx, params.Agent, pipeline.SSHInstall{
 		Address: params.Host,
 		User:    params.User,
 		KeyRef:  params.Key,
