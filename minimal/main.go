@@ -28,6 +28,10 @@ type Params struct {
 	// HostKey is the machine's public key; required — no
 	// trust-on-first-use.
 	HostKey string `json:"hostKey"`
+	// Agent NAMES the agent record. Agent tokens are configured per
+	// name on the installation, so the name must be one the
+	// installation knows (until bootstrap tokens exist).
+	Agent string `json:"agent"`
 	// Key names the secret holding the ssh private key. Only the NAME
 	// travels; the value resolves on the server at the moment of the
 	// install.
@@ -47,7 +51,7 @@ func run(ctx pipeline.Context, params Params) (string, error) {
 	// Declare the agent: a machine that ALREADY exists, whose only
 	// touch by the system is the ssh install. The handle returns
 	// immediately; several declarations in a row converge in parallel.
-	agent := pipeline.NewAgentViaSSH(ctx, "bare-"+string(ctx.RunId()), pipeline.SSHInstall{
+	agent := pipeline.NewAgentViaSSH(ctx, p.Agent, pipeline.SSHInstall{
 		Address: params.Host,
 		User:    params.User,
 		KeyRef:  params.Key,
