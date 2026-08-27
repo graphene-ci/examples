@@ -12,6 +12,7 @@ import (
 	"go.temporal.io/sdk/workflow"
 
 	pipelineactivity "github.com/graphene-ci/pipeline/pkg/activity"
+	"github.com/graphene-ci/pipeline/pkg/artifact"
 	"github.com/graphene-ci/pipeline/pkg/machine"
 	"github.com/graphene-ci/pipeline/pkg/pipeline"
 	"github.com/graphene-ci/pipeline/pkg/ref"
@@ -82,6 +83,16 @@ func run(ctx pipeline.Context, params Params) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
+	// The report is not only the run's RESULT — it is a published
+	// ARTIFACT other pipelines recognize (../full attaches
+	// "baseline-report" and reads its digest). The stand keeps it
+	// alive past this run and past re-creations of this pipeline:
+	// a cross-pipeline data contract, the way an Upstream trigger is
+	// a cross-pipeline control contract.
+	reportArtifact := pipeline.NewArtifact(ctx, "baseline-report",
+		artifact.FromBytes([]byte(report)))
+	pipeline.ToStand(ctx, reportArtifact)
 
 	// Keep window: the record (and the agent link) stands for a while.
 	if params.Keep > 0 {
