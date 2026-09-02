@@ -5,7 +5,7 @@ go 1.26.5
 // Pinned to the pre-v2 pipeline surface; the rewrite onto surface v2 is
 // pending.
 require (
-	github.com/graphene-ci/pipeline v0.0.0-20260826125506-88df493ccdd0
+	github.com/graphene-ci/pipeline v0.0.0-20260902100654-b566dcb54e9b
 	go.temporal.io/sdk v1.47.0
 )
 
