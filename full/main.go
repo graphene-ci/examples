@@ -276,6 +276,40 @@ func runBody(ctx pipeline.Context, params Params) (Result, error) {
 			Host:   &container.HostConfig{RestartPolicy: container.RestartPolicy{Name: container.RestartPolicyAlways}},
 		})
 
+		// A real observability chain on the bare machine: postgres, its
+		// exporter, and the flow between them — the exporter's metrics
+		// reach obs through the container's observation beat (no sidecar
+		// collector, no token on the container).
+		pg := dockerlib.Container(ctx, bareAgent, dockerlib.Spec{
+			Name: "pg",
+			Config: &container.Config{
+				Image: "mirror.gcr.io/library/postgres:16-alpine",
+				Env:   []string{"POSTGRES_PASSWORD=graphene", "POSTGRES_HOST_AUTH_METHOD=trust"},
+			},
+			Host: &container.HostConfig{
+				NetworkMode:   "host",
+				RestartPolicy: container.RestartPolicy{Name: container.RestartPolicyAlways},
+			},
+		})
+		_ = pg.Ready(ctx)
+
+		// The exporter declares its FLOW to postgres (Р-Н25) and its own
+		// prometheus endpoint to scrape (Р-Н27); the beat ships pg_up and
+		// the rest under the record's reference docker/pg-exporter.
+		pgExporter := dockerlib.Container(ctx, bareAgent, dockerlib.Spec{
+			Name: "pg-exporter",
+			Config: &container.Config{
+				Image: "quay.io/prometheuscommunity/postgres-exporter:latest",
+				Env:   []string{"DATA_SOURCE_NAME=postgresql://postgres@localhost:5432/postgres?sslmode=disable"},
+			},
+			Host:   &container.HostConfig{NetworkMode: "host", RestartPolicy: container.RestartPolicy{Name: container.RestartPolicyAlways}},
+			Scrape: "http://localhost:9187/metrics",
+		},
+			pipeline.WithFlowTo(pg, pipeline.TCP, "postgres", pipeline.FlowPort(5432)),
+			pipeline.Children(pg),
+		)
+		_ = pgExporter.Ready(ctx)
+
 		// An Artifact is declared with its SOURCE: where the bytes are is
 		// part of the declaration, the upload is the wrapper's business
 		// (an activity on the right site under the hood — the agent here;
@@ -290,6 +324,10 @@ func runBody(ctx pipeline.Context, params Params) (Result, error) {
 		// bounds the stay, the artifact stays until an explicit delete.
 		pipeline.ToStand(ctx, vm, pipeline.KeepFor(params.Keep))
 		pipeline.ToStand(ctx, reportArtifact)
+		// The postgres chain stays on the stand too, so its exporter keeps
+		// being scraped past the run — the metrics chain outlives the run
+		// that built it (its beat ships pg_up on the stand's executor).
+		pipeline.ToStand(ctx, pgExporter, pipeline.KeepFor(params.Keep))
 
 		result := Result{
 			Report:         report,
