@@ -173,8 +173,8 @@ github.com/graphene-ci/library/docker v0.0.0-20260826115634-e39f4fc0b29a h1:VEoo
 github.com/graphene-ci/library/docker v0.0.0-20260826115634-e39f4fc0b29a/go.mod h1:VdnCdVMsVBfD5i9tnbhwidzGiLAPhCdusduCYadBz8U=
 github.com/graphene-ci/library/k8s v0.0.0-20260826115634-e39f4fc0b29a h1:nXqN0W9Sgs1vU62YC9rf68mEotVcxs+ax3sSkbKsCVI=
 github.com/graphene-ci/library/k8s v0.0.0-20260826115634-e39f4fc0b29a/go.mod h1:Qr1mIq76+8R8Y1986Ze5viFZdNSuNYRyVdkXbctf83g=
-github.com/graphene-ci/pipeline v0.0.0-20260826125506-88df493ccdd0 h1:fLdnHZwD+qZtQXp1bSSC8Jy3GtxswgnskKasPaOwDEE=
-github.com/graphene-ci/pipeline v0.0.0-20260826125506-88df493ccdd0/go.mod h1:PA9xbu1/i8lvr5ufKIr3S5FL82j/B9fASUPzl2b9lbc=
+github.com/graphene-ci/pipeline v0.0.0-20260902100654-b566dcb54e9b h1:T/dZCFq6BbLKl/wRq4wUsq+6lmQ7j1L2ZHkuAJoCSIE=
+github.com/graphene-ci/pipeline v0.0.0-20260902100654-b566dcb54e9b/go.mod h1:PA9xbu1/i8lvr5ufKIr3S5FL82j/B9fASUPzl2b9lbc=
 github.com/graphene-ci/temporal-entity v0.0.0-20260824103956-3919c84e4abb h1:P8lPqznDjPIz4hghg8aVb/9tMrfVJxb6nJhcFWneCII=
 github.com/graphene-ci/temporal-entity v0.0.0-20260824103956-3919c84e4abb/go.mod h1:/dueP9d/i14iEJHNIjQVOYvbiRHZVXMmWUQYIYnBUd8=
 github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.3 h1:B+8ClL/kCQkRiU82d9xajRPKYMrB7E0MbtzWVi1K4ns=
