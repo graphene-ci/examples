@@ -33,6 +33,7 @@ import (
 	ycapis "github.com/yandex-cloud/crossplane-provider-yc/apis"
 	compute "github.com/yandex-cloud/crossplane-provider-yc/apis/cluster/compute/v1alpha1"
 	vpc "github.com/yandex-cloud/crossplane-provider-yc/apis/cluster/vpc/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 
 	dockerlib "github.com/graphene-ci/library/docker"
 	k8slib "github.com/graphene-ci/library/k8s"
@@ -143,7 +144,9 @@ func runBody(ctx pipeline.Context, params Params) (Result, error) {
 			Spec: vpc.NetworkSpec{
 				ForProvider: vpc.NetworkParameters{FolderID: &params.FolderId},
 			},
-		})
+		}, k8slib.WithReady(func(live *vpc.Network) bool {
+			return xpReady(live.Status.GetCondition(xpv1.TypeReady))
+		}))
 
 		// Cross-resource wiring uses the provider's NATIVE Ref fields:
 		// the cluster resolves the reference itself when the network is
@@ -158,7 +161,9 @@ func runBody(ctx pipeline.Context, params Params) (Result, error) {
 					V4CidrBlocks: []*string{ptr("10.0.0.0/24")},
 				},
 			},
-		}, k8slib.WithResourceOption[vpc.Subnet](pipeline.Parent(net)))
+		}, k8slib.WithReady(func(live *vpc.Subnet) bool {
+			return xpReady(live.Status.GetCondition(xpv1.TypeReady))
+		}), k8slib.WithResourceOption[vpc.Subnet](pipeline.Parent(net)))
 
 		// Agent — OUR resource: record + identity of the process we run.
 		// Machine (the real hardware) is a DIFFERENT resource we do not
@@ -344,3 +349,13 @@ func runBody(ctx pipeline.Context, params Params) (Result, error) {
 
 // ptr is the small price of foreign specs made of pointers.
 func ptr[T any](v T) *T { return &v }
+
+// xpReady is the readiness of a crossplane managed resource: its Ready
+// condition is True. This is the USER'S knowledge, typed and kept here —
+// NOT in the k8s library, which knows only vanilla kstatus. A crossplane
+// MR is reconciled asynchronously and for a beat after apply carries no
+// conditions at all; the library's default (no conditions → ready by
+// existing) would latch such a record ready before the cloud object even
+// exists — before the provider authenticates. Every crossplane resource
+// must carry this override so the tree tells the truth.
+func xpReady(c xpv1.Condition) bool { return c.Status == corev1.ConditionTrue }
