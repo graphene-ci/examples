@@ -5,7 +5,7 @@ go 1.26.5
 require (
 	github.com/crossplane/crossplane-runtime/v2 v2.2.0
 	github.com/docker/docker v28.5.2+incompatible
-	github.com/graphene-ci/library/docker v0.0.0-20260902121717-890f50b28184
+	github.com/graphene-ci/library/docker v0.0.0-20260902122906-74ed983cbe32
 	github.com/graphene-ci/library/k8s v0.0.0-20260826115634-e39f4fc0b29a
 	github.com/graphene-ci/pipeline v0.0.0-20260902121639-5393e0e4342e
 	github.com/yandex-cloud/crossplane-provider-yc v0.14.0
