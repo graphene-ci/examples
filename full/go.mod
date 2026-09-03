@@ -5,10 +5,11 @@ go 1.26.5
 require (
 	github.com/crossplane/crossplane-runtime/v2 v2.2.0
 	github.com/docker/docker v28.5.2+incompatible
-	github.com/graphene-ci/library/docker v0.0.0-20260902122906-74ed983cbe32
+	github.com/graphene-ci/library/docker v0.0.0-20260903095931-74e98ea83f6a
 	github.com/graphene-ci/library/k8s v0.0.0-20260826115634-e39f4fc0b29a
 	github.com/graphene-ci/pipeline v0.0.0-20260902121639-5393e0e4342e
 	github.com/yandex-cloud/crossplane-provider-yc v0.14.0
+	k8s.io/api v0.36.3
 )
 
 require (
@@ -168,7 +169,6 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.36.3 // indirect
 	k8s.io/apiextensions-apiserver v0.36.0 // indirect
 	k8s.io/apimachinery v0.36.3 // indirect
 	k8s.io/client-go v0.36.3 // indirect
