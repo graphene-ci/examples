@@ -1,9 +1,21 @@
 # examples
 
-User pipelines against the [pipeline](https://github.com/graphene-ci/pipeline)
-library. Each example is its own Go module.
+Компилируемые пользовательские пайплайны для текущего Go SDK Graphene. Каждый
+пример — отдельный Go-модуль и одновременно исполняемый pipeline binary.
 
-| Example | What it is |
+| Пример | Что показывает |
 |---|---|
-| `full/` | The TARGET UX sketch — not compiling code; the experience the library converges to: main wrapper with typed params, Pulumi-style chained resources, provider libraries, an agent with cloud-init identity, libraries on top of the agent. Every gap between it and today's library is future surface work. |
-| `minimal/` | The same story told with today's surface — compiles: typed params, a cloud machine owned by the run, one-shot `Action` on it, keep window, teardown by the run's end. |
+| `minimal/` | существующая SSH-машина, установка агента, at-most-once activity, публикация артефакта и передача его stand |
+| `full/` | типизированные параметры, cron/webhook, Crossplane-ресурсы, два агента, Docker, выборки, артефакты, flows, телеметрия и lifetime |
+
+План строится локально, без сервера и внешней инфраструктуры:
+
+```bash
+cd full
+go run . plan
+```
+
+`plan -o json` печатает машиночитаемое представление, `plan -o mermaid` —
+диаграмму. Реальный run требует инсталляцию Graphene и внешние системы,
+указанные параметрами примера. Пошаговый первый запуск описан в
+[документации](https://graphene-ci.github.io/docs/start/first-look).
