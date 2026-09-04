@@ -5,6 +5,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"go.temporal.io/sdk/workflow"
@@ -18,6 +19,10 @@ type Params struct {
 	// SleepSeconds keeps the cell running for a while — so a fan-out can be
 	// caught mid-flight and cancelled, proving the cascade.
 	SleepSeconds int `json:"sleepSeconds"`
+	// FailAt makes the cell fail when N == FailAt (0 disables) — to prove a
+	// failed child fails only its own handle, not its siblings, and never
+	// loops the await.
+	FailAt int `json:"failAt"`
 }
 
 // Result is what a cell returns.
@@ -27,6 +32,9 @@ type Result struct {
 }
 
 func run(ctx pipeline.Context, p Params) (Result, error) {
+	if p.FailAt != 0 && p.N == p.FailAt {
+		return Result{}, fmt.Errorf("cell n=%d deliberately failed", p.N)
+	}
 	if p.SleepSeconds > 0 {
 		if err := workflow.Sleep(ctx, time.Duration(p.SleepSeconds)*time.Second); err != nil {
 			return Result{}, err

@@ -20,6 +20,9 @@ type Params struct {
 	// SleepSeconds is passed to each cell — a slow fan-out to catch and
 	// cancel mid-flight.
 	SleepSeconds int `json:"sleepSeconds"`
+	// FailAt makes the cell with n==FailAt fail (0 disables) — to prove
+	// isolation: one failed cell counts as a failure, siblings still sum.
+	FailAt int `json:"failAt"`
 }
 
 // cellResult mirrors childcell's Result — the child returns its result as
@@ -43,7 +46,7 @@ func run(ctx pipeline.Context, p Params) (Result, error) {
 	cells := make([]pipeline.Cell, p.Count)
 	for i := range cells {
 		n := i + 1
-		cells[i] = pipeline.Cell{ID: fmt.Sprintf("cell-%d", n), Params: childParams(n, p.SleepSeconds)}
+		cells[i] = pipeline.Cell{ID: fmt.Sprintf("cell-%d", n), Params: childParams(n, p.SleepSeconds, p.FailAt)}
 	}
 	handles := pipeline.RunAll[cellResult](ctx, "childcell", cells, p.Concurrency)
 
@@ -62,8 +65,8 @@ func run(ctx pipeline.Context, p Params) (Result, error) {
 }
 
 // childParams builds one childcell's params.
-func childParams(n, sleepSeconds int) map[string]int {
-	return map[string]int{"n": n, "sleepSeconds": sleepSeconds}
+func childParams(n, sleepSeconds, failAt int) map[string]int {
+	return map[string]int{"n": n, "sleepSeconds": sleepSeconds, "failAt": failAt}
 }
 
 func main() {
