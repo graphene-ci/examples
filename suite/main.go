@@ -11,12 +11,14 @@ import (
 	"github.com/graphene-ci/pipeline/pkg/pipeline"
 )
 
-// Params drives the fan-out.
+// Params drives the fan-out. The tags become schema constraints the door
+// (and a UI) enforce; Validate() below adds the cross-field check the
+// schema cannot express.
 type Params struct {
 	// Count is how many cells to run (childcell of n = 1..Count).
-	Count int `json:"count"`
+	Count int `json:"count" validate:"min=1,max=100" desc:"number of cells to run"`
 	// Concurrency bounds how many cells run at once; 0 means all.
-	Concurrency int `json:"concurrency"`
+	Concurrency int `json:"concurrency" validate:"min=0" desc:"max cells running at once (0 = all)"`
 	// SleepSeconds is passed to each cell — a slow fan-out to catch and
 	// cancel mid-flight.
 	SleepSeconds int `json:"sleepSeconds"`
@@ -37,6 +39,15 @@ type Result struct {
 	Cells    int `json:"cells"`
 	Sum      int `json:"sum"`
 	Failures int `json:"failures"`
+}
+
+// Validate is the cross-field check the schema cannot express: you cannot
+// ask for more concurrency than there are cells.
+func (p Params) Validate() error {
+	if p.Concurrency > p.Count {
+		return fmt.Errorf("concurrency %d exceeds count %d", p.Concurrency, p.Count)
+	}
+	return nil
 }
 
 func run(ctx pipeline.Context, p Params) (Result, error) {
