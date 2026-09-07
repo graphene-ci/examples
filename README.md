@@ -1,21 +1,36 @@
 # examples
 
-Компилируемые пользовательские пайплайны для текущего Go SDK Graphene. Каждый
-пример — отдельный Go-модуль и одновременно исполняемый pipeline binary.
+Buildable user pipelines for the current Graphene Go SDK. Each example is its
+own Go module and, at the same time, an executable pipeline binary.
 
-| Пример | Что показывает |
+| Example | What it shows |
 |---|---|
-| `minimal/` | существующая SSH-машина, установка агента, at-most-once activity, публикация артефакта и передача его stand |
-| `full/` | типизированные параметры, cron/webhook, Crossplane-ресурсы, два агента, Docker, выборки, артефакты, flows, телеметрия и lifetime |
+| `minimal/` | an existing ssh machine, agent install, an at-most-once activity, publishing an artifact and handing it to a stand |
+| `full/` | typed params, cron/webhook, Crossplane resources, two agents, Docker, selections, artifacts, flows, telemetry and lifetime |
+| `childcell/` | the smallest child pipeline — squares a number (used by `suite`) |
+| `suite/` | a parent pipeline that fans out over cells of `childcell` with `pipeline.RunAll` (concurrency, typed results, failure isolation) |
+| `echocell/` | a tiny standalone pipeline used to prove the source-first flow |
 
-План строится локально, без сервера и внешней инфраструктуры:
+## Plan (local, no server)
 
 ```bash
 cd full
-go run . plan
+go run . plan            # -o json for machine-readable, -o mermaid for a diagram
 ```
 
-`plan -o json` печатает машиночитаемое представление, `plan -o mermaid` —
-диаграмму. Реальный run требует инсталляцию Graphene и внешние системы,
-указанные параметрами примера. Пошаговый первый запуск описан в
-[документации](https://graphene-ci.github.io/docs/start/first-look).
+## Run against an installation
+
+A real run needs a Graphene installation and the external systems the example's
+params name. Push the pipeline and start a run with
+[`graphenectl`](https://github.com/graphene-ci/graphene) (or the binary's own
+`push` / `run`):
+
+```bash
+# source-first: build on the server, keep the source, one token
+graphenectl revision materialize suite --upload .
+graphenectl invoke pipeline suite activate --data '{"revisionId":"<rev>"}'
+graphenectl run start suite --params '{"count":4,"concurrency":2}'
+```
+
+The step-by-step first run is in the
+[docs](https://graphene-ci.github.io/docs/start/first-look).
