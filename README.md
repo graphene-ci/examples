@@ -11,6 +11,35 @@ own Go module and, at the same time, an executable pipeline binary.
 | `suite/` | a parent pipeline that fans out over cells of `childcell` with `pipeline.RunAll` (concurrency, typed results, failure isolation) |
 | `echocell/` | a tiny standalone pipeline used to prove the source-first flow |
 
+## Локальные тесты full
+
+С опубликованными версиями SDK и библиотек достаточно этого репозитория:
+
+```bash
+cd full
+GOWORK=off go test -race ./...
+GOWORK=off go run . plan
+```
+
+Для совместной разработки разместите checkout `pipeline`, `library` и `examples` рядом. Корневой Makefile
+проверяет `full` против текущего SDK и библиотек через игнорируемый `go.work`:
+
+```bash
+make configure
+make test
+make lint
+cd full
+go test -race ./...
+```
+
+Тесты исполняют `run` с fixtures двух агентов, Kubernetes/Crossplane, Docker и
+артефактов; проверяют результат, очереди, дерево, cleanup и TTL при успехе,
+ошибках работы/создания VM/установки Docker, отмене и отсутствии чужого артефакта. Живая инфраструктура не
+используется. Остальные примеры сохраняют собственные Go-модули; корневой
+`make test` покрывает только `full`.
+
+Подробности: [локальные тесты](https://graphene-ci.github.io/docs/sdk/testing).
+
 ## Plan (local, no server)
 
 ```bash

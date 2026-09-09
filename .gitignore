@@ -1,4 +1,7 @@
 minimal/minimal
 *.out
 full/full
+/bin/
+/go.work
+/go.work.sum
 minimal/minimal
