@@ -76,7 +76,7 @@ type Result struct {
 	Report         string `json:"report"`
 	DockerVersion  string `json:"dockerVersion"`
 	ContainerId    string `json:"containerId"`
-	VmId           string `json:"vmId"`
+	VMId           string `json:"vmId"`
 	BaselineDigest string `json:"baselineDigest"`
 }
 
@@ -341,7 +341,7 @@ func runBody(ctx pipeline.Context, params Params) (Result, error) {
 			BaselineDigest: baseline.Ready(ctx).Blob.Digest,
 		}
 		if vmId != nil {
-			result.VmId = *vmId
+			result.VMId = *vmId
 		}
 		return result, nil
 	}(ctx, params)

@@ -1,5 +1,15 @@
 .DEFAULT_GOAL := help
 
+.PHONY: configure test lint
+configure: ## Prepare the local SDK/library workspace and pinned tools
+	$(MAKE) -C .. configure
+
+test: ## Run local workflow tests
+	$(MAKE) -C .. test
+
+lint: ## Lint the example
+	$(MAKE) -C .. lint
+
 IMAGE := perf-nightly:latest
 
 .PHONY: tidy

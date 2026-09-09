@@ -5,10 +5,12 @@ go 1.26.5
 require (
 	github.com/crossplane/crossplane-runtime/v2 v2.2.0
 	github.com/docker/docker v28.5.2+incompatible
-	github.com/graphene-ci/library/docker v0.0.0-20260904124715-dc18e2163bb1
-	github.com/graphene-ci/library/k8s v0.0.0-20260826115634-e39f4fc0b29a
-	github.com/graphene-ci/pipeline v0.0.0-20260904114715-d8d786406bd2
+	github.com/graphene-ci/library/docker v0.2.0
+	github.com/graphene-ci/library/k8s v0.2.0
+	github.com/graphene-ci/pipeline v0.2.0
+	github.com/stretchr/testify v1.12.1
 	github.com/yandex-cloud/crossplane-provider-yc v0.14.0
+	go.temporal.io/sdk v1.47.0
 	k8s.io/api v0.36.3
 )
 
@@ -48,6 +50,7 @@ require (
 	github.com/felixge/httpsnoop v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
+	github.com/gabriel-vasile/mimetype v1.4.15 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-openapi/jsonpointer v0.22.4 // indirect
@@ -64,6 +67,9 @@ require (
 	github.com/go-openapi/swag/stringutils v0.25.4 // indirect
 	github.com/go-openapi/swag/typeutils v0.25.4 // indirect
 	github.com/go-openapi/swag/yamlutils v0.25.4 // indirect
+	github.com/go-playground/locales v0.14.1 // indirect
+	github.com/go-playground/universal-translator v0.18.1 // indirect
+	github.com/go-playground/validator/v10 v10.30.4 // indirect
 	github.com/gobuffalo/flect v1.0.3 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
@@ -74,7 +80,7 @@ require (
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/go-containerregistry v0.21.9 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/gopherex/schemapb/go v0.0.0-20260805100557-b08e53066d63 // indirect
+	github.com/gopherex/schemapb/go v0.0.0-20260904155309-67a92c03b7e6 // indirect
 	github.com/graphene-ci/temporal-entity v0.0.0-20260824103956-3919c84e4abb // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.3 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0 // indirect
@@ -93,6 +99,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.19.1 // indirect
+	github.com/leodido/go-urn v1.5.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
@@ -121,7 +128,6 @@ require (
 	github.com/spf13/cobra v1.10.2 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/stretchr/objx v0.5.3 // indirect
-	github.com/stretchr/testify v1.12.1 // indirect
 	github.com/tmccombs/hcl2json v0.3.3 // indirect
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
@@ -145,10 +151,10 @@ require (
 	go.opentelemetry.io/otel/trace v1.45.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.11.0 // indirect
 	go.temporal.io/api v1.63.5 // indirect
-	go.temporal.io/sdk v1.47.0 // indirect
 	go.temporal.io/sdk/contrib/opentelemetry v0.8.1 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
+	golang.org/x/crypto v0.55.0 // indirect
 	golang.org/x/exp v0.0.0-20260112195511-716be5621a96 // indirect
 	golang.org/x/mod v0.38.0 // indirect
 	golang.org/x/net v0.58.0 // indirect
