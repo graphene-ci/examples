@@ -1,0 +1,9 @@
+demo
+bin/
+*.out
+DEMO.md
+params.yaml
+params-bad.yaml
+main.go.full
+keys/
+params-strict.yaml

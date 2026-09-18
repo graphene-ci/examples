@@ -10,6 +10,7 @@ own Go module and, at the same time, an executable pipeline binary.
 | `childcell/` | the smallest child pipeline — squares a number (used by `suite`) |
 | `suite/` | a parent pipeline that fans out over cells of `childcell` with `pipeline.RunAll` (concurrency, typed results, failure isolation) |
 | `echocell/` | a tiny standalone pipeline used to prove the source-first flow |
+| `demo/` | two ssh machines end to end: Docker, postgres as a resource, **your own pytest suite** carried inside the binary (`go:embed` → `File` → `dockerlib.Job`), a stroppy load as another `Job`, junit and logs as artifacts, numbers as metrics, run labels, a stand with a TTL |
 
 ## Локальные тесты full
 
