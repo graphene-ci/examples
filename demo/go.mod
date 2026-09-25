@@ -4,9 +4,9 @@ go 1.26.5
 
 require (
 	github.com/docker/docker v28.5.2+incompatible
-	github.com/graphene-ci/library/docker v0.3.2
+	github.com/graphene-ci/library/docker v0.3.3
 	github.com/graphene-ci/library/file v0.2.1
-	github.com/graphene-ci/pipeline v0.2.11
+	github.com/graphene-ci/pipeline v0.2.12
 	github.com/stretchr/testify v1.12.1
 	go.opentelemetry.io/otel v1.45.0
 	go.opentelemetry.io/otel/sdk/metric v1.45.0
